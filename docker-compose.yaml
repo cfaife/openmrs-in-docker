@@ -1,0 +1,55 @@
+version: '3.9'
+
+networks:
+  alone-network:
+  
+
+volumes:
+  alone-data:
+  alone-runtime-props:
+  alone-tomcat:
+
+services:
+
+  alone-db:
+    container_name: alone-db
+    image: mysql:5.6
+    environment:
+      MYSQL_ROOT_PASSWORD: "eSaude1234"
+      MYSQL_DATABASE: "openmrs"
+      MYSQL_USER: "openmrs"
+      MYSQL_PASSWORD: "openmrs"
+    ports:
+      - "3313:3306"
+    command:
+      --max_allowed_packet=404857600
+      --innodb-log-file-size=5G
+    volumes:
+      - alone-data:/var/lib/mysql
+      - ./fghmaster2021setembro_20210611.sql:/root/fghmaster2021setembro_20210611.sql
+    networks:
+      - alone-network
+
+  alone-app:
+    container_name: alone-app
+    image: tomcat:7-jre7-alpine
+    ports:
+      - "8093:8080"
+    environment:
+      JAVA_OPTS: "-Djava.awt.headless=true -Xmx8G -Xms8G -XX:MaxPermSize=8G -XX:+UseConcMarkSweepGC"
+    networks:
+      - alone-network
+    depends_on:
+      - alone-db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8093"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    volumes:
+      - alone-runtime-props:/root/.OpenMRS
+      - alone-tomcat:/usr/local/tomcat/webapps
+      - ./openmrs.war:/usr/local/tomcat/webapps/openmrs.war
+      - ./modules/:/root/.OpenMRS/modules/
